@@ -5,7 +5,7 @@
 
 /* INCLUSAO DOS ARQUIVOS HEADER (BIBLIOTECAS): */
 
-#include <winsock2.h> // Para a comunicacao com os sockets
+#include <winsock2.h> // Para utilizar os sockets
 #include <stdio.h> // Para funcoes de I/O padrao
 #include <stdlib.h> // Para funcoes de alocacao de memoria, entre outras
 #include <time.h> // Para tempo e utilizacao do relogio do dispositivo
@@ -22,7 +22,7 @@ void set_color(int text_color, int bg_color) { // Esta funcao doidona aqui que p
 }
 
 void printar_placar(void) {
-	
+
 	set_color(7, 0); // Cor do texto padrao (branco)
 	printf("\n CLIENTE: ");
 	if (pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
@@ -47,16 +47,20 @@ void printar_placar(void) {
 		set_color(12, 0);
 		printf("%d", pontuacao_servidor);
 	}
-	set_color(7, 0); // Retorna a cor padrao por seguranca	
+	set_color(7, 0);
+	printf("         JOGADA: ");
+	set_color(9, 0);
+	printf("%d", jogada);
+	set_color(7, 0); // Retorna a cor padrao por seguranca
 }
 
 void printar_tela(void) {
-	
+
 	system("cls"); // Limpa a tela
 	printar_placar();
-	
+
     int x, y; // Variaveis para iterar sobre a matriz (tabuleiro) para imprimi-lo na tela
-    
+
     set_color(9, 0); // Seta a cor para azul mais escuro
     printf("\n\n       1   2   3   4   5   6   7   8   9   10\n"); // Imprime os numeros de cada coluna nessa cor
     set_color(3, 0); // Seta a cor para azul mais claro
@@ -75,7 +79,7 @@ void printar_tela(void) {
 				if (!tabuleiro[x][y].tem_bomba) { // E se nao tinha bomba nela
 					set_color(10, 0); // Imprime em verde
 					printf(" X "); // Imprime um 'X' e os espacos, para indicar que a casa ja foi jogada e nao tinha mina nela
-					
+
 				} else { // E se tinha bomba nela, ou seja, algum jogador ja se explodiu ali anteriormente
 					set_color(12, 0);
 					printf(" * "); // Imprime um '*' e os espacos, para indicar que a casa ja foi jogada e tinha mina nela
@@ -84,48 +88,70 @@ void printar_tela(void) {
 				printf("|"); // Imprime a proxima divisoria vertical
 			}
 		}
-		
+
         printf("\n     -----------------------------------------\n"); // Imprime a proxima divisoria horizontal
     }
-    
+
     set_color(11, 0); // Seta a cor para ciano claro
     printf("\n--> Digite a coordenada desejada: "); // Solicita a jogada do usuario
     set_color(7, 0); // Seta a cor de volta para o padrao
 }
 
-int validar_jogada(char *entrada) {
+int validar_jogada(char *entrada, int *linha, int *coluna) {
+
 	int tam = strlen(entrada);
-	
+
 	if (tam < 2 || tam > 3) {
 		return 0;
 	}
-	
+
 	char letra;
 	int numero;
-	
-	if (isalpha(entrada[0]) && isdigit(entrada[1])) {
-		letra = toupper(entrada[0]);
-		numero = atoi(&entrada[1]);
-	} else if (isdigit(entrada[0]) && isalpha(entrada[1])) {
-		letra = toupper(entrada[1]);
-		numero = atoi(&entrada[0]); 
-	} else {
-		return 0;
+
+	if (tam == 2) {
+		if (isalpha(entrada[0]) && isdigit(entrada[1])) {
+			letra = toupper(entrada[0]);
+			numero = atoi(&entrada[1]);
+		} else if (isdigit(entrada[0]) && isalpha(entrada[1])) {
+			letra = toupper(entrada[1]);
+			numero = atoi(&entrada[0]);
+		} else {
+			return 0;
+		}
+	} else if (tam == 3) {
+		if (isalpha(entrada[0]) && entrada[1] == '1' && entrada[2] == '0') {
+			letra = toupper(entrada[0]);
+			numero = 10;
+		} else if (entrada[0] == '1' && entrada[1] == '0' && isalpha(entrada[2])) {
+			letra = toupper(entrada[2]);
+			numero = 10;
+		} else {
+			return 0;
+		}
 	}
-	
+
 	if (letra < 'A' || letra > 'J' || numero < 1 || numero > 10) {
 		return 0;
 	}
-	
-	if (tabuleiro[(int)letra -64][numero].ja_clicado) {
+
+	int posicao_linha = (int)(letra - 'A');
+	int posicao_coluna = numero - 1;
+
+	if (tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
 		return 0;
 	}
-	
+
+	*linha = posicao_linha;
+	*coluna = posicao_coluna;
+
 	return 1;
 }
 
 int main(void) {
-	
+
+    int linha, coluna;
+	char entrada[4];
+
 	/*WSADATA winsocketsDados;
     if (WSAStartup(MAKEWORD(2, 2), &winsocketsDados) != 0) {
         printf("Falha ao inicializar o Winsock\n");
@@ -174,7 +200,7 @@ int main(void) {
             return 1;
         }
         if (strcmp(sendBuffer, "exit") == 0) {
-            printf("Encerrando a conex„o com o servidor\n");
+            printf("Encerrando a conex√£o com o servidor\n");
             break;
         }
 
@@ -185,13 +211,13 @@ int main(void) {
             WSACleanup();
             return 1;
         } else if (bytesReceived == 0) {
-            printf("Conex„o fechada pelo servidor\n");
+            printf("Conex√£o fechada pelo servidor\n");
             break;
         } else {
             recvBuffer[bytesReceived] = '\0';
             printf("Recebido: %s\n", recvBuffer);
             if (strcmp(recvBuffer, "exit") == 0) {
-                printf("Servidor pediu para fechar a conex„o\n");
+                printf("Servidor pediu para fechar a conex√£o\n");
                 break;
             }
         }
@@ -199,6 +225,20 @@ int main(void) {
 
     closesocket(clientSocket);
     WSACleanup();*/
-    
+
+    while (jogada <= 100) {
+		do {
+			system("cls");
+			fflush(stdin);
+			printar_tela();
+			scanf("%s", &entrada);
+		} while (!validar_jogada(entrada, &linha, &coluna));
+
+		atualizar_dados(linha, coluna);
+
+		linha = -1;
+		coluna = -1;
+	}
+
     return 0;
 }
