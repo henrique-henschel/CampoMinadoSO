@@ -5,7 +5,7 @@
 
 /* INCLUSAO DOS ARQUIVOS HEADER (BIBLIOTECAS): */
 
-#include <winsock2.h> // Para a comunicacao com os sockets
+#include <winsock2.h> // Para utilizar os sockets
 #include <stdio.h> // Para funcoes de I/O padrao
 #include <stdlib.h> // Para funcoes de alocacao de memoria, entre outras
 #include <time.h> // Para tempo e utilizacao do relogio do dispositivo
@@ -50,17 +50,10 @@ int gerar_bombas(void) { // Funcao para distribuir as bombas aleatoriamente entr
 
 	int aleatorio = (rand() % 100) + 1;
 	
-	return (aleatorio > 50) ? 1 : 0;
+	return (aleatorio > 60) ? 1 : 0;
 }
 
-int testar_cliques(void) { // Funcao para teste da interface apenas
-
-	int aleatorio = (rand() % 100) + 1;
-	
-	return (aleatorio > 50) ? 1 : 0;
-}
-
-void set_color(int text_color, int bg_color) { // Esta funcao doidona aqui que permite mudar as cores da interface
+void set_color(int text_color, int bg_color) { // Esta funcao permite mudar as cores da interface
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, (WORD)(bg_color << 4) | text_color);
@@ -92,6 +85,10 @@ void printar_placar(void) {
 		set_color(12, 0);
 		printf("%d", pontuacao_servidor);
 	}
+	set_color(7, 0);
+	printf("         JOGADA: ");
+	set_color(9, 0);
+	printf("%d", jogada);
 	set_color(7, 0); // Retorna a cor padrao por seguranca	
 }
 
@@ -138,7 +135,8 @@ void printar_tela(void) {
     set_color(7, 0); // Seta a cor de volta para o padrao
 }
 
-int validar_jogada(char *entrada) {
+int validar_jogada(char *entrada, int *linha, int *coluna) {
+	
 	int tam = strlen(entrada);
 	
 	if (tam < 2 || tam > 3) {
@@ -148,28 +146,54 @@ int validar_jogada(char *entrada) {
 	char letra;
 	int numero;
 	
-	if (isalpha(entrada[0]) && isdigit(entrada[1])) {
-		letra = toupper(entrada[0]);
-		numero = atoi(&entrada[1]);
-	} else if (isdigit(entrada[0]) && isalpha(entrada[1])) {
-		letra = toupper(entrada[1]);
-		numero = atoi(&entrada[0]); 
-	} else {
-		return 0;
+	if (tam == 2) {
+		if (isalpha(entrada[0]) && isdigit(entrada[1])) {
+			letra = toupper(entrada[0]);
+			numero = atoi(&entrada[1]);
+		} else if (isdigit(entrada[0]) && isalpha(entrada[1])) {
+			letra = toupper(entrada[1]);
+			numero = atoi(&entrada[0]); 
+		} else {
+			return 0;
+		}
+	} else if (tam == 3) {
+		if (isalpha(entrada[0]) && entrada[1] == '1' && entrada[2] == '0') {
+			letra = toupper(entrada[0]);
+			numero = 10;
+		} else if (entrada[0] == '1' && entrada[1] == '0' && isalpha(entrada[2])) {
+			letra = toupper(entrada[2]);
+			numero = 10;
+		} else {
+			return 0;
+		}
 	}
 	
 	if (letra < 'A' || letra > 'J' || numero < 1 || numero > 10) {
 		return 0;
 	}
 	
-	if (tabuleiro[(int)letra -64][numero].ja_clicado) {
+	int posicao_linha = (int)(letra - 'A');
+	int posicao_coluna = numero - 1;
+	
+	if (tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
 		return 0;
 	}
+	
+	*linha = posicao_linha;
+	*coluna = posicao_coluna;
 	
 	return 1;
 }
 
+void atualizar_dados(int linha, int coluna) {
+	
+	tabuleiro[linha][coluna].ja_clicado = 1;
+	(tabuleiro[linha][coluna].tem_bomba) ? pontuacao_servidor-- : pontuacao_servidor++;
+	jogada++;
+}
+
 int main(void) {
+	
 	/*WSADATA winsocketsDados;
     int temp;
 
@@ -220,12 +244,12 @@ int main(void) {
 
     clientSocket = accept(sock, (struct sockaddr*)&clientAddr, &clientAddrLen);
     if (clientSocket == INVALID_SOCKET) {
-        printf("Erro ao aceitar a conex„o: %d\n", WSAGetLastError());
+        printf("Erro ao aceitar a conex√£o: %d\n", WSAGetLastError());
         closesocket(sock);
         WSACleanup();
         return 1;
     } else {
-        printf("Conex„o aceita com sucesso\n");
+        printf("Conex√£o aceita com sucesso\n");
     }
 
     char recvBuffer[512];
@@ -240,13 +264,13 @@ int main(void) {
             WSACleanup();
             return 1;
         } else if (bytesReceived == 0) {
-            printf("Conex„o fechada pelo cliente\n");
+            printf("Conex√£o fechada pelo cliente\n");
             break;
         } else {
             recvBuffer[bytesReceived] = '\0';
             printf("Recebido: %s\n", recvBuffer);
             if (strcmp(recvBuffer, "exit") == 0) {
-                printf("Cliente pediu para fechar a conex„o\n");
+                printf("Cliente pediu para fechar a conex√£o\n");
                 break;
             }
         }
@@ -263,7 +287,7 @@ int main(void) {
             return 1;
         }
         if (strcmp(sendBuffer, "exit") == 0) {
-            printf("Encerrando a conex„o com o cliente\n");
+            printf("Encerrando a conex√£o com o cliente\n");
             break;
         }
     }
@@ -274,7 +298,23 @@ int main(void) {
 	
 	srand(time(NULL));
 	inicializar_tabuleiro();
-    printar_tela();
-    
+	
+	int linha, coluna;
+	char entrada[4];
+	
+	while (jogada <= 100) {
+		do {
+			system("cls");
+			fflush(stdin);
+			printar_tela();
+			scanf("%s", &entrada);
+		} while (!validar_jogada(entrada, &linha, &coluna));
+		
+		atualizar_dados(linha, coluna);  
+		
+		linha = -1;
+		coluna = -1;
+	}
+	
     return 0;
 }
