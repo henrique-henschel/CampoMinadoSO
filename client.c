@@ -13,54 +13,86 @@
 #include <ctype.h> // Para algumas funcoes de manipulacao de caracteres
 #include <string.h> // Para manipulacao de strings
 
+#define QTD_LINHAS 10
+#define QTD_COLUNAS 10
+
+typedef struct {
+    int ja_clicado;
+    int tem_bomba;
+} Casa;
+
+typedef struct {
+	int numero_jogada;
+	int pontuacao_servidor;
+	int pontuacao_cliente;
+} Placar;
+
+typedef struct {
+	Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS];
+	Placar placar;	
+} Dados;
+
+Dados dados;
+
 /* DECLARACAO DAS FUNCOES DO PROGRAMA: */
 
-void set_color(int text_color, int bg_color) { // Esta funcao doidona aqui que permite mudar as cores da interface
+void sendTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
+    // Envia a matriz como um bloco de bytes
+    send(sock, (const char *)tabuleiro, sizeof(Casa) * QTD_LINHAS * QTD_COLUNAS, 0);
+}
+
+void receiveTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
+    // Recebe os dados
+    recv(sock, (char *)tabuleiro, sizeof(Casa) * QTD_LINHAS * QTD_COLUNAS, 0);
+}
+
+
+void set_color(int text_color, int bg_color) { // Esta funcao permite mudar as cores da interface
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, (WORD)(bg_color << 4) | text_color);
 }
 
 void printar_placar(void) {
-
+	
 	set_color(7, 0); // Cor do texto padrao (branco)
 	printf("\n CLIENTE: ");
-	if (pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
+	if (dados.placar.pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
 		set_color(3, 0);
-		printf("%d", pontuacao_cliente);
-	} else if (pontuacao_cliente == 0) { // Se a pontuacao for zero, printa em laranja
+		printf("%d", dados.placar.pontuacao_cliente);
+	} else if (dados.placar.pontuacao_cliente == 0) { // Se a pontuacao for zero, printa em laranja
 		set_color(6, 0);
-		printf("%d", pontuacao_cliente);
+		printf("%d", dados.placar.pontuacao_cliente);
 	} else { // Se a pontuacao for negativa, printa em vermelho
 		set_color(12, 0);
-		printf("%d", pontuacao_cliente);
+		printf("%d", dados.placar.pontuacao_cliente);
 	}
 	set_color(7, 0); // Cor padrao
 	printf("  X  SERVIDOR: "); // Espacos, sinal de versus e pontuacao do servidor a seguir
-	if (pontuacao_servidor > 0) { // Se a pontuacao for positiva, printa em azul
+	if (dados.placar.pontuacao_servidor > 0) { // Se a pontuacao for positiva, printa em azul
 		set_color(3, 0);
-		printf("%d", pontuacao_servidor);
-	} else if (pontuacao_servidor == 0) { // Se a pontuacao for zero, printa em laranja
+		printf("%d", dados.placar.pontuacao_servidor);
+	} else if (dados.placar.pontuacao_servidor == 0) { // Se a pontuacao for zero, printa em laranja
 		set_color(6, 0);
-		printf("%d", pontuacao_servidor);
+		printf("%d", dados.placar.pontuacao_servidor);
 	} else { // Se a pontuacao for negativa, printa em vermelho
 		set_color(12, 0);
-		printf("%d", pontuacao_servidor);
+		printf("%d", dados.placar.pontuacao_servidor);
 	}
 	set_color(7, 0);
 	printf("         JOGADA: ");
 	set_color(9, 0);
-	printf("%d", jogada);
-	set_color(7, 0); // Retorna a cor padrao por seguranca
+	printf("%d", dados.placar.numero_jogada);
+	set_color(7, 0); // Retorna a cor padrao por seguranca	
 }
 
 void printar_tela(void) {
-
+	
 	system("cls"); // Limpa a tela
 	printar_placar();
-
+	
     int x, y; // Variaveis para iterar sobre a matriz (tabuleiro) para imprimi-lo na tela
-
+    
     set_color(9, 0); // Seta a cor para azul mais escuro
     printf("\n\n       1   2   3   4   5   6   7   8   9   10\n"); // Imprime os numeros de cada coluna nessa cor
     set_color(3, 0); // Seta a cor para azul mais claro
@@ -73,13 +105,13 @@ void printar_tela(void) {
         printf("  |"); // Imprime a primeira divisoria vertical nessa cor
 
         for (y = 0; y < QTD_COLUNAS; y++) { // Loop para iterar sobre as colunas
-        	if (!tabuleiro[x][y].ja_clicado) { // Se a casa nao foi jogada ainda, simplesmente imprime um espaco em branco e a proxima divisoria
+        	if (!dados.tabuleiro[x][y].ja_clicado) { // Se a casa nao foi jogada ainda, simplesmente imprime um espaco em branco e a proxima divisoria
 				printf("   |");
 			} else { // Se a casa ja foi jogada
-				if (!tabuleiro[x][y].tem_bomba) { // E se nao tinha bomba nela
+				if (!dados.tabuleiro[x][y].tem_bomba) { // E se nao tinha bomba nela
 					set_color(10, 0); // Imprime em verde
 					printf(" X "); // Imprime um 'X' e os espacos, para indicar que a casa ja foi jogada e nao tinha mina nela
-
+					
 				} else { // E se tinha bomba nela, ou seja, algum jogador ja se explodiu ali anteriormente
 					set_color(12, 0);
 					printf(" * "); // Imprime um '*' e os espacos, para indicar que a casa ja foi jogada e tinha mina nela
@@ -88,10 +120,10 @@ void printar_tela(void) {
 				printf("|"); // Imprime a proxima divisoria vertical
 			}
 		}
-
+		
         printf("\n     -----------------------------------------\n"); // Imprime a proxima divisoria horizontal
     }
-
+    
     set_color(11, 0); // Seta a cor para ciano claro
     printf("\n--> Digite a coordenada desejada: "); // Solicita a jogada do usuario
     set_color(7, 0); // Seta a cor de volta para o padrao
@@ -137,7 +169,7 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 	int posicao_linha = (int)(letra - 'A');
 	int posicao_coluna = numero - 1;
 
-	if (tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
+	if (dados.tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
 		return 0;
 	}
 
@@ -147,12 +179,16 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 	return 1;
 }
 
+void atualizar_dados(int linha, int coluna) {
+	
+	dados.tabuleiro[linha][coluna].ja_clicado = 1;
+	(dados.tabuleiro[linha][coluna].tem_bomba) ? dados.placar.pontuacao_cliente-- : dados.placar.pontuacao_cliente++;
+	dados.placar.numero_jogada++;
+}
+
 int main(void) {
 
-    int linha, coluna;
-	char entrada[4];
-
-	/*WSADATA winsocketsDados;
+	WSADATA winsocketsDados;
     if (WSAStartup(MAKEWORD(2, 2), &winsocketsDados) != 0) {
         printf("Falha ao inicializar o Winsock\n");
         return 1;
@@ -182,63 +218,57 @@ int main(void) {
     } else {
         printf("Conectado ao servidor\n");
     }
-
-    char sendBuffer[512];
-    char recvBuffer[512];
-    int bytesReceived;
+    
+    Dados recebidos;
+	int bytesReceived;
+	char entrada[4];
+	int linha, coluna;
+    
+    recv(clientSocket, (char*)&recebidos, sizeof(Dados), 0);
+    dados = recebidos; // Importantíssimo para a inicialização no cliente
 
     while (1) {
-        printf("Digite a mensagem para enviar ao servidor: ");
-        fgets(sendBuffer, sizeof(sendBuffer), stdin);
-        sendBuffer[strcspn(sendBuffer, "\n")] = 0;
+        do {
+			system("cls");
+			fflush(stdin);
+			printar_tela();
+			scanf("%s", &entrada);
+		} while (!validar_jogada(entrada, &linha, &coluna));
+		
+		atualizar_dados(linha, coluna);
+		printar_tela();
 
-        int bytesSent = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
+        int bytesSent = send(clientSocket, (char*)&dados, sizeof(Dados), 0);
+        
         if (bytesSent == SOCKET_ERROR) {
             printf("Erro ao enviar dados: %d\n", WSAGetLastError());
             closesocket(clientSocket);
             WSACleanup();
             return 1;
         }
-        if (strcmp(sendBuffer, "exit") == 0) {
-            printf("Encerrando a conexão com o servidor\n");
-            break;
-        }
 
-        bytesReceived = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        bytesReceived = recv(clientSocket, (char*)&recebidos, sizeof(Dados), 0);
+        
         if (bytesReceived == SOCKET_ERROR) {
             printf("Erro ao receber dados: %d\n", WSAGetLastError());
             closesocket(clientSocket);
             WSACleanup();
             return 1;
         } else if (bytesReceived == 0) {
-            printf("Conexão fechada pelo servidor\n");
+            printf("ConexÃ£o fechada pelo servidor\n");
             break;
         } else {
-            recvBuffer[bytesReceived] = '\0';
-            printf("Recebido: %s\n", recvBuffer);
-            if (strcmp(recvBuffer, "exit") == 0) {
-                printf("Servidor pediu para fechar a conexão\n");
-                break;
-            }
+            dados = recebidos;
         }
+        
+        printar_tela();
+        
+        linha = -1;
+        coluna = -1;
     }
 
     closesocket(clientSocket);
-    WSACleanup();*/
-
-    while (jogada <= 100) {
-		do {
-			system("cls");
-			fflush(stdin);
-			printar_tela();
-			scanf("%s", &entrada);
-		} while (!validar_jogada(entrada, &linha, &coluna));
-
-		atualizar_dados(linha, coluna);
-
-		linha = -1;
-		coluna = -1;
-	}
+    WSACleanup();
 
     return 0;
 }
