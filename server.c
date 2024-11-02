@@ -13,26 +13,26 @@
 #include <ctype.h> // Para algumas funcoes de manipulacao de caracteres
 #include <string.h> // Para manipulacao de strings
 
-/* CRIACAO DA(S) STRUCT(S), DEFINICOES DE DIRETIVAS, DECLARACAO E INICIALIZACAO DE VARIAVEIS GLOBAIS: */
-
-#define QTD_LINHAS 10 // Define a quantidade de linhas como 10 (pode ser alterado conforme desejado)
-#define QTD_COLUNAS 10 // Define a quantidade de colunas como 10 (pode ser alterado conforme desejado)
-
-const int QTD_CASAS = QTD_LINHAS * QTD_COLUNAS; // Variavel global com a quantidade total de casas do tabuleiro (LINHAS x COLUNAS)
+#define QTD_LINHAS 10
+#define QTD_COLUNAS 10
 
 typedef struct {
-	
-	int ja_clicado; // Valor booleano 1 caso a casa ja tenha sido jogada e 0 caso contrario
-	int tem_bomba; // Valor booleano 1 caso a casa possua uma mina (bomba) e 0 caso contrario
-} Casa; // Struct para representar cada casa do tabuleiro
+    int ja_clicado;
+    int tem_bomba;
+} Casa;
 
-Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]; // Declaracao do tabuleiro (matriz de structs do tipo 'Casa')
+typedef struct {
+	int numero_jogada;
+	int pontuacao_servidor;
+	int pontuacao_cliente;
+} Placar;
 
-int jogada = 1; // Variavel global para marcar o numero da jogada
-int pontuacao_cliente = 0; // Variavel global que inicia em zero
-int pontuacao_servidor = 0; // Variavel global que inicia em zero
+typedef struct {
+	Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS];
+	Placar placar;	
+} Dados;
 
-/* DECLARACAO DAS FUNCOES DO PROGRAMA: */
+Dados dados;
 
 void inicializar_tabuleiro(void) {
 	
@@ -40,10 +40,17 @@ void inicializar_tabuleiro(void) {
 	
 	for (x = 0; x < QTD_LINHAS; x++) {
 		for (y = 0; y < QTD_COLUNAS; y++) {
-			tabuleiro[x][y].ja_clicado = 0; // Nenhuma casa ainda foi jogada no inicio
-			tabuleiro[x][y].tem_bomba = gerar_bombas(); // Invoca a funcao de geracao aleatoria de bombas
+			dados.tabuleiro[x][y].ja_clicado = 0;// Nenhuma casa ainda foi jogada no inicio
+			dados.tabuleiro[x][y].tem_bomba = gerar_bombas(); // Invoca a funcao de geracao aleatoria de bombas
 		}
 	}
+}
+
+void inicializar_placar(void) {
+	
+	dados.placar.numero_jogada = 1;
+	dados.placar.pontuacao_cliente = 0;
+	dados.placar.pontuacao_servidor = 0;
 }
 
 int gerar_bombas(void) { // Funcao para distribuir as bombas aleatoriamente entre as casas do tabuleiro
@@ -63,32 +70,32 @@ void printar_placar(void) {
 	
 	set_color(7, 0); // Cor do texto padrao (branco)
 	printf("\n CLIENTE: ");
-	if (pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
+	if (dados.placar.pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
 		set_color(3, 0);
-		printf("%d", pontuacao_cliente);
-	} else if (pontuacao_cliente == 0) { // Se a pontuacao for zero, printa em laranja
+		printf("%d", dados.placar.pontuacao_cliente);
+	} else if (dados.placar.pontuacao_cliente == 0) { // Se a pontuacao for zero, printa em laranja
 		set_color(6, 0);
-		printf("%d", pontuacao_cliente);
+		printf("%d", dados.placar.pontuacao_cliente);
 	} else { // Se a pontuacao for negativa, printa em vermelho
 		set_color(12, 0);
-		printf("%d", pontuacao_cliente);
+		printf("%d", dados.placar.pontuacao_cliente);
 	}
 	set_color(7, 0); // Cor padrao
 	printf("  X  SERVIDOR: "); // Espacos, sinal de versus e pontuacao do servidor a seguir
-	if (pontuacao_servidor > 0) { // Se a pontuacao for positiva, printa em azul
+	if (dados.placar.pontuacao_servidor > 0) { // Se a pontuacao for positiva, printa em azul
 		set_color(3, 0);
-		printf("%d", pontuacao_servidor);
-	} else if (pontuacao_servidor == 0) { // Se a pontuacao for zero, printa em laranja
+		printf("%d", dados.placar.pontuacao_servidor);
+	} else if (dados.placar.pontuacao_servidor == 0) { // Se a pontuacao for zero, printa em laranja
 		set_color(6, 0);
-		printf("%d", pontuacao_servidor);
+		printf("%d", dados.placar.pontuacao_servidor);
 	} else { // Se a pontuacao for negativa, printa em vermelho
 		set_color(12, 0);
-		printf("%d", pontuacao_servidor);
+		printf("%d", dados.placar.pontuacao_servidor);
 	}
 	set_color(7, 0);
 	printf("         JOGADA: ");
 	set_color(9, 0);
-	printf("%d", jogada);
+	printf("%d", dados.placar.numero_jogada);
 	set_color(7, 0); // Retorna a cor padrao por seguranca	
 }
 
@@ -111,13 +118,12 @@ void printar_tela(void) {
         printf("  |"); // Imprime a primeira divisoria vertical nessa cor
 
         for (y = 0; y < QTD_COLUNAS; y++) { // Loop para iterar sobre as colunas
-        	if (!tabuleiro[x][y].ja_clicado) { // Se a casa nao foi jogada ainda, simplesmente imprime um espaco em branco e a proxima divisoria
+        	if (!dados.tabuleiro[x][y].ja_clicado) { // Se a casa nao foi jogada ainda, simplesmente imprime um espaco em branco e a proxima divisoria
 				printf("   |");
 			} else { // Se a casa ja foi jogada
-				if (!tabuleiro[x][y].tem_bomba) { // E se nao tinha bomba nela
+				if (!dados.tabuleiro[x][y].tem_bomba) { // E se nao tinha bomba nela
 					set_color(10, 0); // Imprime em verde
-					printf(" X "); // Imprime um 'X' e os espacos, para indicar que a casa ja foi jogada e nao tinha mina nela
-					
+					printf(" X "); // Imprime um 'X' e os espacos, para indicar que a casa ja foi jogada e nao tinha mina nela	
 				} else { // E se tinha bomba nela, ou seja, algum jogador ja se explodiu ali anteriormente
 					set_color(12, 0);
 					printf(" * "); // Imprime um '*' e os espacos, para indicar que a casa ja foi jogada e tinha mina nela
@@ -175,7 +181,7 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 	int posicao_linha = (int)(letra - 'A');
 	int posicao_coluna = numero - 1;
 	
-	if (tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
+	if (dados.tabuleiro[posicao_linha][posicao_coluna].ja_clicado) {
 		return 0;
 	}
 	
@@ -187,14 +193,14 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 
 void atualizar_dados(int linha, int coluna) {
 	
-	tabuleiro[linha][coluna].ja_clicado = 1;
-	(tabuleiro[linha][coluna].tem_bomba) ? pontuacao_servidor-- : pontuacao_servidor++;
-	jogada++;
+	dados.tabuleiro[linha][coluna].ja_clicado = 1;
+	(dados.tabuleiro[linha][coluna].tem_bomba) ? dados.placar.pontuacao_servidor-- : dados.placar.pontuacao_servidor++;
+	dados.placar.numero_jogada++;
 }
 
 int main(void) {
 	
-	/*WSADATA winsocketsDados;
+	WSADATA winsocketsDados;
     int temp;
 
     temp = WSAStartup(MAKEWORD(2, 2), &winsocketsDados);
@@ -244,77 +250,65 @@ int main(void) {
 
     clientSocket = accept(sock, (struct sockaddr*)&clientAddr, &clientAddrLen);
     if (clientSocket == INVALID_SOCKET) {
-        printf("Erro ao aceitar a conexão: %d\n", WSAGetLastError());
+        printf("Erro ao aceitar a conexÃ£o: %d\n", WSAGetLastError());
         closesocket(sock);
         WSACleanup();
         return 1;
     } else {
-        printf("Conexão aceita com sucesso\n");
+        printf("ConexÃ£o aceita com sucesso\n");
     }
-
-    char recvBuffer[512];
+    
+    srand(time(NULL));
+	inicializar_tabuleiro();
+	inicializar_placar();
+	printar_tela();
+	send(clientSocket, (char*)&dados, sizeof(Dados), 0);
+	
+	Dados recebidos;
     int bytesReceived;
-    char sendBuffer[512];
+    char entrada[4];
+    int linha, coluna;
 
     while (1) {
-        bytesReceived = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        bytesReceived = recv(clientSocket, (char*)&recebidos, sizeof(Dados), 0);
+        
         if (bytesReceived == SOCKET_ERROR) {
             printf("Erro ao receber dados: %d\n", WSAGetLastError());
             closesocket(clientSocket);
             WSACleanup();
             return 1;
         } else if (bytesReceived == 0) {
-            printf("Conexão fechada pelo cliente\n");
+            printf("ConexÃ£o fechada pelo cliente\n");
             break;
         } else {
-            recvBuffer[bytesReceived] = '\0';
-            printf("Recebido: %s\n", recvBuffer);
-            if (strcmp(recvBuffer, "exit") == 0) {
-                printf("Cliente pediu para fechar a conexão\n");
-                break;
-            }
+            dados = recebidos;
         }
 
-        printf("Digite a mensagem para enviar ao cliente: ");
-        fgets(sendBuffer, sizeof(sendBuffer), stdin);
-        sendBuffer[strcspn(sendBuffer, "\n")] = 0;
+        do {
+			fflush(stdin);
+			printar_tela();
+			scanf("%s", &entrada);
+		} while (!validar_jogada(entrada, &linha, &coluna));
+		
+		atualizar_dados(linha, coluna);
+		printar_tela();
 
-        int bytesSent = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
+        int bytesSent = send(clientSocket, (char*)&dados, sizeof(Dados), 0);
+        
         if (bytesSent == SOCKET_ERROR) {
             printf("Erro ao enviar dados: %d\n", WSAGetLastError());
             closesocket(clientSocket);
             WSACleanup();
             return 1;
         }
-        if (strcmp(sendBuffer, "exit") == 0) {
-            printf("Encerrando a conexão com o cliente\n");
-            break;
-        }
+        
+        linha = -1;
+		coluna = -1;
     }
 
     closesocket(clientSocket);
     closesocket(sock);
-    WSACleanup();*/
-	
-	srand(time(NULL));
-	inicializar_tabuleiro();
-	
-	int linha, coluna;
-	char entrada[4];
-	
-	while (jogada <= 100) {
-		do {
-			system("cls");
-			fflush(stdin);
-			printar_tela();
-			scanf("%s", &entrada);
-		} while (!validar_jogada(entrada, &linha, &coluna));
-		
-		atualizar_dados(linha, coluna);  
-		
-		linha = -1;
-		coluna = -1;
-	}
+    WSACleanup();
 	
     return 0;
 }
