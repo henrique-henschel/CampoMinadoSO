@@ -15,6 +15,7 @@
 
 #define QTD_LINHAS 10
 #define QTD_COLUNAS 10
+#define QTD_CASAS (QTD_LINHAS * QTD_COLUNAS)
 
 typedef struct {
     int ja_clicado;
@@ -30,6 +31,8 @@ typedef struct {
 typedef struct {
 	Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS];
 	Placar placar;	
+	int quantidade_bombas;
+	int bombas_acionadas;
 } Dados;
 
 Dados dados;
@@ -37,6 +40,9 @@ Dados dados;
 void inicializar_tabuleiro(void) {
 	
 	int x, y; // Variaveis locais para iteracao nos loops da funcao
+	
+	dados.quantidade_bombas = 0;
+	dados.bombas_acionadas = 0;
 	
 	for (x = 0; x < QTD_LINHAS; x++) {
 		for (y = 0; y < QTD_COLUNAS; y++) {
@@ -57,7 +63,12 @@ int gerar_bombas(void) { // Funcao para distribuir as bombas aleatoriamente entr
 
 	int aleatorio = (rand() % 100) + 1;
 	
-	return (aleatorio > 60) ? 1 : 0;
+	if (aleatorio > 60) {
+		dados.quantidade_bombas++;
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 void set_color(int text_color, int bg_color) { // Esta funcao permite mudar as cores da interface
@@ -194,8 +205,25 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 void atualizar_dados(int linha, int coluna) {
 	
 	dados.tabuleiro[linha][coluna].ja_clicado = 1;
-	(dados.tabuleiro[linha][coluna].tem_bomba) ? dados.placar.pontuacao_servidor-- : dados.placar.pontuacao_servidor++;
+	
+	// (dados.tabuleiro[linha][coluna].tem_bomba) ? dados.placar.pontuacao_servidor-- : dados.placar.pontuacao_servidor++;
+	if (dados.tabuleiro[linha][coluna].tem_bomba) {
+		dados.placar.pontuacao_servidor--;
+		dados.bombas_acionadas++;
+	} else {
+		dados.placar.pontuacao_servidor++;
+	}
+	
 	dados.placar.numero_jogada++;
+}
+
+int encerrar_jogo(void) {
+	
+	if (dados.placar.numero_jogada <= 100 && abs(dados.placar.pontuacao_servidor - dados.placar.pontuacao_cliente) <= (dados.quantidade_bombas / 2) + 1 && !(dados.bombas_acionadas == dados.quantidade_bombas)) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
 int main(void) {
@@ -269,7 +297,7 @@ int main(void) {
     char entrada[4];
     int linha, coluna;
 
-    while (1) {
+    while (!encerrar_jogo()) {
         bytesReceived = recv(clientSocket, (char*)&recebidos, sizeof(Dados), 0);
         
         if (bytesReceived == SOCKET_ERROR) {
