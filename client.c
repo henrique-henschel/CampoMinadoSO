@@ -15,6 +15,7 @@
 
 #define QTD_LINHAS 10
 #define QTD_COLUNAS 10
+#define QTD_CASAS (QTD_LINHAS * QTD_COLUNAS)
 
 typedef struct {
     int ja_clicado;
@@ -29,7 +30,9 @@ typedef struct {
 
 typedef struct {
 	Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS];
-	Placar placar;	
+	Placar placar;
+	int quantidade_bombas;
+	int bombas_acionadas;	
 } Dados;
 
 Dados dados;
@@ -182,7 +185,14 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 void atualizar_dados(int linha, int coluna) {
 	
 	dados.tabuleiro[linha][coluna].ja_clicado = 1;
-	(dados.tabuleiro[linha][coluna].tem_bomba) ? dados.placar.pontuacao_cliente-- : dados.placar.pontuacao_cliente++;
+	
+	if (dados.tabuleiro[linha][coluna].tem_bomba) {
+		dados.placar.pontuacao_cliente--;
+		dados.bombas_acionadas++;
+	} else {
+		dados.placar.pontuacao_cliente++;
+	}
+	
 	dados.placar.numero_jogada++;
 }
 
