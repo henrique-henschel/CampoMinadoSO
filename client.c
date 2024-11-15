@@ -1,6 +1,10 @@
-/* PROJETO CAMPO MINADO DE DOIS JOGADORES
-   MAURILIO - SISTEMAS OPERACIONAIS (SO)
+/* PROJETO: CAMPO MINADO DE DOIS JOGADORES
+   UNICESUMAR - Engenharia de Software
+   TURMA: ESOFT4S-N-A
+   DISCIPLINA: Sistemas Operacionais (SO)
+   PROFESSOR/ORIENTADOR: Maurilio
    DATA DE INICIO: 30/10/2024
+   DATA/PRAZO FINAL: 17/11/2024
 */
 
 /* INCLUSAO DOS ARQUIVOS HEADER (BIBLIOTECAS): */
@@ -39,7 +43,7 @@ Dados dados;
 
 /* DECLARACAO DAS FUNCOES DO PROGRAMA: */
 
-void sendTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
+/*void sendTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
     // Envia a matriz como um bloco de bytes
     send(sock, (const char *)tabuleiro, sizeof(Casa) * QTD_LINHAS * QTD_COLUNAS, 0);
 }
@@ -47,17 +51,14 @@ void sendTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
 void receiveTabuleiro(SOCKET sock, Casa tabuleiro[QTD_LINHAS][QTD_COLUNAS]) {
     // Recebe os dados
     recv(sock, (char *)tabuleiro, sizeof(Casa) * QTD_LINHAS * QTD_COLUNAS, 0);
-}
-
+}*/
 
 void set_color(int text_color, int bg_color) { // Esta funcao permite mudar as cores da interface
-
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, (WORD)(bg_color << 4) | text_color);
 }
 
-void printar_placar(void) {
-	
+void printar_placar(void) {	
 	set_color(7, 0); // Cor do texto padrao (branco)
 	printf("\n CLIENTE: ");
 	if (dados.placar.pontuacao_cliente > 0) { // Se a pontuacao for positiva, printa em azul
@@ -89,8 +90,7 @@ void printar_placar(void) {
 	set_color(7, 0); // Retorna a cor padrao por seguranca	
 }
 
-void printar_tela(void) {
-	
+void printar_tela(void) {	
 	system("cls"); // Limpa a tela
 	printar_placar();
 	
@@ -133,7 +133,6 @@ void printar_tela(void) {
 }
 
 int validar_jogada(char *entrada, int *linha, int *coluna) {
-
 	int tam = strlen(entrada);
 
 	if (tam < 2 || tam > 3) {
@@ -182,8 +181,7 @@ int validar_jogada(char *entrada, int *linha, int *coluna) {
 	return 1;
 }
 
-void atualizar_dados(int linha, int coluna) {
-	
+void atualizar_dados(int linha, int coluna) {	
 	dados.tabuleiro[linha][coluna].ja_clicado = 1;
 	
 	if (dados.tabuleiro[linha][coluna].tem_bomba) {
@@ -196,8 +194,108 @@ void atualizar_dados(int linha, int coluna) {
 	dados.placar.numero_jogada++;
 }
 
-int main(void) {
+void printar_vitoria(void) { // Funcao somente para teste
+	set_color(2, 0);
+	printf("\n\n              PARABENS!\n");
+	set_color(10, 0);
+	printf("             VOCE VENCEU\n\n");
+	set_color(7, 0);
+	printf("             ");
+	set_color(14, 0);
+    printf("___________\n");
+    set_color(7, 0);
+    printf("            ");
+    set_color(14, 0);
+    printf("'._==_==_=_.'\n");
+	set_color(7, 0);
+	printf("            ");
+    set_color(14, 0);
+    printf(".-\\       /-.\n");
+    set_color(7, 0);
+    printf("           ");
+    set_color(14, 0);
+    printf("| (|  YOU  |) |\n");
+    set_color(7, 0);
+    printf("            ");
+    set_color(14, 0);
+    printf("'-|  WIN! |-'\n");
+    set_color(7, 0);
+    printf("              ");
+    set_color(14, 0);
+    printf("\\       /\n");
+    set_color(7, 0);
+   	printf("               ");
+    set_color(14, 0);
+    printf("'.   .'\n");
+    set_color(7, 0);
+    printf("                 ");
+    set_color(14, 0);
+    printf(") (\n");
+    set_color(7, 0);
+    printf("               ");
+    set_color(14, 0);
+    printf("_.' '._\n");
+    set_color(7, 0);
+    printf("              ");
+    set_color(14, 0);
+    printf("`\"\"\"\"\"\"\"`\n");
+    set_color(7, 0);
+}
 
+void printar_empate(void) {	
+	set_color(15, 0);
+	printf("\n\n\n\n	  __________________________\n");
+	printf("         |                          |\n");
+	printf("         |                          |\n");
+	printf("         |     ");
+	set_color(15, 1);
+	printf("PARTIDA DIFICIL!");
+	set_color(15, 0);
+	printf("     |\n");
+	printf("         |                          |\n");
+	printf("         |          ");
+	set_color(6, 0);
+	printf("EMPATE");
+	set_color(15, 0);
+	printf("          |\n");
+	printf("         |                          |\n");
+	printf("         |__________________________|\n\n\n\n");
+}
+
+void printar_derrota(void) {	
+	set_color(15, 0);
+	printf("\n\n\n\n	  __________________________\n");
+	printf("         |                          |\n");
+	printf("         |                          |\n");
+	printf("         |   ");
+	set_color(15, 4);
+	printf("NAO FOI DESSA VEZ :C");
+	set_color(15, 0);
+	printf("   |\n");
+	printf("         |                          |\n");
+	printf("         |       ");
+	set_color(12, 0);
+	printf("VOCE PERDEU!");
+	set_color(15, 0);
+	printf("       |\n");
+	printf("         |                          |\n");
+	printf("         |__________________________|\n\n\n\n");
+}
+
+void printar_resultado(void) {	
+	if (dados.placar.pontuacao_cliente > dados.placar.pontuacao_servidor) {
+		// Vitoria do cliente
+		printar_vitoria();
+	} else if (dados.placar.pontuacao_cliente == dados.placar.pontuacao_servidor) {
+		// Empate
+		printar_empate();
+	} else {
+		// Derrota do cliente
+		printar_derrota();
+	}
+}
+
+int main(void) {
 	WSADATA winsocketsDados;
     if (WSAStartup(MAKEWORD(2, 2), &winsocketsDados) != 0) {
         printf("Falha ao inicializar o Winsock\n");
@@ -265,7 +363,7 @@ int main(void) {
             WSACleanup();
             return 1;
         } else if (bytesReceived == 0) {
-            printf("ConexÃ£o fechada pelo servidor\n");
+            printf("Conexao fechada pelo servidor\n");
             break;
         } else {
             dados = recebidos;
